@@ -25,7 +25,7 @@ export function RainTimeline({ points, localNow }: RainTimelineProps) {
   const scale = Math.max(0.4, summary.peak);
 
   return (
-    <section aria-labelledby="rain-heading" className="brut bg-card p-5">
+    <section aria-labelledby="rain-heading" className="brut flex flex-col bg-card p-5">
       <div className="flex items-center gap-2">
         <Droplets className="size-5 text-rain" strokeWidth={3} aria-hidden="true" />
         <h2 id="rain-heading" className="font-display text-lg uppercase tracking-tight">
@@ -35,7 +35,7 @@ export function RainTimeline({ points, localNow }: RainTimelineProps) {
 
       <p className="mt-1 text-sm font-semibold text-muted-foreground">{summary.headline}</p>
 
-      <div className="mt-4 flex h-24 items-end gap-1.5" role="list">
+      <div className="mt-auto flex h-24 items-end gap-1.5 pt-4" role="list">
         {points.map((point, index) => {
           const height = Math.max(4, (point.precip / scale) * 100);
           return (
