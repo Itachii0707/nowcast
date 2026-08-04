@@ -3,9 +3,12 @@ import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { CloudSun } from "lucide-react";
 
+import { ActivityIndex } from "@/components/weather/ActivityIndex";
+import { AlertBanner } from "@/components/weather/AlertBanner";
 import { Ambience } from "@/components/weather/Ambience";
 import { AirQualityPanel } from "@/components/weather/AirQualityPanel";
 import { CurrentCard } from "@/components/weather/CurrentCard";
+import { RainTimeline } from "@/components/weather/RainTimeline";
 import { DailyList } from "@/components/weather/DailyList";
 import { ErrorCard } from "@/components/weather/ErrorCard";
 import { HourlyStrip } from "@/components/weather/HourlyStrip";
@@ -197,6 +200,8 @@ function NowCastPage() {
 
           {weather && (
             <>
+              {weather.alerts?.length ? <AlertBanner alerts={weather.alerts} /> : null}
+
               <CurrentCard
                 weather={weather}
                 unit={prefs.unit}
@@ -216,6 +221,15 @@ function NowCastPage() {
                 <AirQualityPanel air={weather.air} />
               </div>
 
+              {weather.minutely?.length ? (
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <RainTimeline points={weather.minutely} localNow={weather.fetchedAt} />
+                  <ActivityIndex current={weather.current} />
+                </div>
+              ) : (
+                <ActivityIndex current={weather.current} />
+              )}
+
               <InsightPanel
                 current={weather.current}
                 hourly={weather.hourly}
@@ -224,6 +238,7 @@ function NowCastPage() {
               />
 
               <MetricTiles current={weather.current} unit={prefs.unit} />
+
 
               <HourlyStrip hourly={weather.hourly} unit={prefs.unit} />
 

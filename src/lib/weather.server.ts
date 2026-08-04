@@ -15,7 +15,10 @@ import type {
   ConditionGroup,
   DailyPoint,
   HourlyPoint,
+  MinutelyPoint,
+  WeatherAlert,
   WeatherCondition,
+
   WeatherLocation,
   WeatherPayload,
 } from "./weather-types";
@@ -208,9 +211,15 @@ interface OpenMeteoForecast {
     surface_pressure: number;
     wind_speed_10m: number;
     wind_direction_10m: number;
+    wind_gusts_10m?: number;
     visibility?: number;
     uv_index?: number;
   };
+  minutely_15?: {
+    time: string[];
+    precipitation: number[];
+  };
+
   hourly: {
     time: string[];
     temperature_2m: number[];
@@ -230,13 +239,32 @@ interface OpenMeteoForecast {
   };
 }
 
+/** Next two hours of 15-minute precipitation slots, from "now" onwards. */
+function minutelyFromOpenMeteo(
+  forecast: OpenMeteoForecast,
+  nowEpoch: number,
+): MinutelyPoint[] | undefined {
+  const block = forecast.minutely_15;
+  if (!block) return undefined;
+  const points: MinutelyPoint[] = [];
+  block.time.forEach((iso, index) => {
+    const time = localIsoToEpoch(iso);
+    if (time < nowEpoch - 15 * 60 * 1000 || points.length >= 8) return;
+    points.push({ time, precip: block.precipitation[index] ?? 0 });
+  });
+  return points.length ? points : undefined;
+}
+
 async function fetchOpenMeteo(location: WeatherLocation): Promise<WeatherPayload> {
+
   const params = new URLSearchParams({
     latitude: String(location.lat),
     longitude: String(location.lon),
     current:
-      "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,visibility,uv_index",
+      "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,uv_index",
+    minutely_15: "precipitation",
     hourly: "temperature_2m,weather_code,precipitation_probability",
+
     daily:
       "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max",
     timezone: "auto",
@@ -267,7 +295,10 @@ async function fetchOpenMeteo(location: WeatherLocation): Promise<WeatherPayload
       };
     });
 
+  const minutely = minutelyFromOpenMeteo(forecast, nowEpoch);
+
   const daily: DailyPoint[] = forecast.daily.time.map((time, i) => ({
+
     time: localIsoToEpoch(time),
     min: forecast.daily.temperature_2m_min[i] ?? 0,
     max: forecast.daily.temperature_2m_max[i] ?? 0,
@@ -284,6 +315,10 @@ async function fetchOpenMeteo(location: WeatherLocation): Promise<WeatherPayload
       humidity: forecast.current.relative_humidity_2m,
       windSpeed: forecast.current.wind_speed_10m,
       windDeg: forecast.current.wind_direction_10m,
+      ...(forecast.current.wind_gusts_10m != null
+        ? { windGust: forecast.current.wind_gusts_10m }
+        : {}),
+
       visibility: forecast.current.visibility ?? 10000,
       pressure: Math.round(forecast.current.surface_pressure),
       uvIndex: forecast.current.uv_index ?? forecast.daily.uv_index_max[0] ?? 0,
@@ -293,7 +328,10 @@ async function fetchOpenMeteo(location: WeatherLocation): Promise<WeatherPayload
     },
     hourly,
     daily,
+    ...(minutely ? { minutely } : {}),
     air: await fetchOpenMeteoAir(location),
+
+
     fetchedAt: Date.now() + forecast.utc_offset_seconds * 1000,
     source: "open-meteo",
   };
@@ -351,8 +389,17 @@ interface OwmOneCall {
     visibility: number;
     wind_speed: number;
     wind_deg: number;
+    wind_gust?: number;
     weather: Array<{ id: number; description: string }>;
   };
+  minutely?: Array<{ dt: number; precipitation: number }>;
+  alerts?: Array<{
+    sender_name?: string;
+    event: string;
+    description: string;
+    start: number;
+    end: number;
+  }>;
   hourly: Array<{
     dt: number;
     temp: number;
@@ -372,8 +419,9 @@ async function fetchOpenWeather(
   apiKey: string,
 ): Promise<WeatherPayload> {
   const data = (await getJson(
-    `https://api.openweathermap.org/data/3.0/onecall?lat=${location.lat}&lon=${location.lon}&units=metric&exclude=minutely,alerts&appid=${apiKey}`,
+    `https://api.openweathermap.org/data/3.0/onecall?lat=${location.lat}&lon=${location.lon}&units=metric&appid=${apiKey}`,
   )) as OwmOneCall;
+
 
   const offset = data.timezone_offset;
   const currentWeather = data.current.weather[0];
@@ -387,6 +435,8 @@ async function fetchOpenWeather(
       humidity: data.current.humidity,
       windSpeed: data.current.wind_speed,
       windDeg: data.current.wind_deg,
+      ...(data.current.wind_gust != null ? { windGust: data.current.wind_gust } : {}),
+
       visibility: data.current.visibility,
       pressure: data.current.pressure,
       uvIndex: data.current.uvi,
@@ -407,7 +457,27 @@ async function fetchOpenWeather(
       condition: owmCondition(day.weather[0]?.id ?? 800, day.weather[0]?.description),
       pop: Math.round((day.pop ?? 0) * 100),
     })),
+    ...(data.minutely?.length
+      ? {
+          minutely: data.minutely.slice(0, 24).map((slot) => ({
+            time: shift(slot.dt, offset),
+            precip: slot.precipitation ?? 0,
+          })),
+        }
+      : {}),
+    ...(data.alerts?.length
+      ? {
+          alerts: data.alerts.slice(0, 4).map((alert): WeatherAlert => ({
+            event: alert.event,
+            description: alert.description.slice(0, 400),
+            start: shift(alert.start, offset),
+            end: shift(alert.end, offset),
+            ...(alert.sender_name ? { sender: alert.sender_name } : {}),
+          })),
+        }
+      : {}),
     air: await fetchOwmAir(location, apiKey),
+
     fetchedAt: Date.now() + offset * 1000,
     source: "openweathermap",
   };

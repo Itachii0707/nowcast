@@ -1,6 +1,11 @@
 /**
- * Background ambience layer: pure CSS motion tuned per weather condition.
- * Purely decorative, so it is hidden from assistive tech.
+ * Background ambience layer: pure CSS motion tuned per weather condition,
+ * cross-faded whenever the condition or day/night state changes.
+ *
+ * Two stacked layers are kept alive at once (outgoing + incoming) so a change
+ * from, say, "clear day" to "rain" dissolves instead of snapping. Each layer
+ * carries its own `data-sky` attribute, which is what drives the gradient
+ * tokens defined in styles.css.
  *
  * Layers per condition group:
  *  - clear (day):   rotating sun disc + sweeping light rays + heat shimmer
@@ -13,6 +18,9 @@
  *  - windy accents: gust lines for rain/storm/clouds
  */
 
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+
+import { skyKey } from "@/lib/weather-format";
 import type { ConditionGroup } from "@/lib/weather-types";
 
 interface AmbienceProps {
@@ -26,6 +34,61 @@ function seeded(index: number, salt: number) {
 }
 
 export function Ambience({ group, isDay }: AmbienceProps) {
+  const reduced = useReducedMotion();
+  const sky = skyKey(group, isDay);
+  const layerKey = `${sky}:${group}:${isDay ? "day" : "night"}`;
+
+  return (
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+      {/* Cross-fading sky + ambience stack. `mode="sync"` keeps the outgoing
+          layer mounted so the two gradients overlap during the transition. */}
+      <AnimatePresence initial={false} mode="sync">
+        <motion.div
+          key={layerKey}
+          data-sky={sky}
+          className="absolute inset-0"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduced ? 0 : 0.9, ease: "easeInOut" }}
+        >
+          <div className="absolute inset-0 sky-gradient" />
+          <div className="absolute inset-0 hatch opacity-40" />
+          <ConditionLayers group={group} isDay={isDay} reduced={Boolean(reduced)} />
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Day/night wash: a warm-to-cool sweep that fires on each change. */}
+      {!reduced && (
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={`wash-${isDay ? "day" : "night"}`}
+            className="absolute inset-0"
+            style={{
+              backgroundImage: isDay
+                ? "linear-gradient(120deg, color-mix(in oklab, var(--sun) 45%, transparent), transparent 60%)"
+                : "linear-gradient(300deg, color-mix(in oklab, var(--night) 55%, transparent), transparent 60%)",
+            }}
+            initial={{ opacity: 0.85, x: isDay ? "-30%" : "30%" }}
+            animate={{ opacity: 0, x: "0%" }}
+            transition={{ duration: 1.6, ease: "easeOut" }}
+          />
+        </AnimatePresence>
+      )}
+    </div>
+  );
+}
+
+interface LayerProps {
+  group: ConditionGroup;
+  isDay: boolean;
+  reduced: boolean;
+}
+
+/** The decorative motion for one condition/day-night combination. */
+function ConditionLayers({ group, isDay, reduced }: LayerProps) {
+  if (reduced) return null;
+
   const streaks = group === "rain" || group === "storm";
   const flakes = group === "snow";
   const clouds = group === "clouds" || group === "fog" || streaks;
@@ -34,10 +97,7 @@ export function Ambience({ group, isDay }: AmbienceProps) {
   const sunny = isDay && group === "clear";
 
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      <div className="absolute inset-0 sky-gradient" />
-      <div className="absolute inset-0 hatch opacity-40" />
-
+    <>
       {/* ---------------- Sunny ---------------- */}
       {sunny && (
         <>
@@ -193,6 +253,6 @@ export function Ambience({ group, isDay }: AmbienceProps) {
           </svg>
         </>
       )}
-    </div>
+    </>
   );
 }
