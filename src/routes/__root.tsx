@@ -77,13 +77,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Atmosphere — Weather Dashboard" },
+      { title: "NowCast — Weather Dashboard" },
       {
         name: "description",
         content:
-          "Atmosphere: a bold weather dashboard with live conditions, hourly and 7-day forecasts, air quality and temperature trends.",
+          "NowCast: a bold weather dashboard with live conditions, hourly and 7-day forecasts, air quality and temperature trends.",
       },
-      { property: "og:title", content: "Atmosphere — Weather Dashboard" },
+      { property: "og:title", content: "NowCast — Weather Dashboard" },
       {
         property: "og:description",
         content:
