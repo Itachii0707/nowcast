@@ -197,6 +197,8 @@ function NowCastPage() {
 
           {weather && (
             <>
+              {weather.alerts?.length ? <AlertBanner alerts={weather.alerts} /> : null}
+
               <CurrentCard
                 weather={weather}
                 unit={prefs.unit}
@@ -216,6 +218,15 @@ function NowCastPage() {
                 <AirQualityPanel air={weather.air} />
               </div>
 
+              {weather.minutely?.length ? (
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <RainTimeline points={weather.minutely} localNow={weather.fetchedAt} />
+                  <ActivityIndex current={weather.current} />
+                </div>
+              ) : (
+                <ActivityIndex current={weather.current} />
+              )}
+
               <InsightPanel
                 current={weather.current}
                 hourly={weather.hourly}
@@ -224,6 +235,7 @@ function NowCastPage() {
               />
 
               <MetricTiles current={weather.current} unit={prefs.unit} />
+
 
               <HourlyStrip hourly={weather.hourly} unit={prefs.unit} />
 
