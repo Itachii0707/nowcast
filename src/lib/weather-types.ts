@@ -39,6 +39,9 @@ export interface CurrentWeather {
   windSpeed: number;
   /** Meteorological degrees the wind is coming from. */
   windDeg: number;
+  /** Gust speed in metres per second, when the provider reports it. */
+  windGust?: number;
+
   /** Metres. */
   visibility: number;
   /** hPa. */
@@ -65,6 +68,23 @@ export interface DailyPoint {
   pop: number;
 }
 
+/** Short-range precipitation point (15-minute or 1-minute resolution). */
+export interface MinutelyPoint {
+  time: number;
+  /** Millimetres of precipitation for the slot. */
+  precip: number;
+}
+
+/** Provider-issued severe weather warning. */
+export interface WeatherAlert {
+  event: string;
+  description: string;
+  start: number;
+  end: number;
+  sender?: string;
+}
+
+
 export interface AirQuality {
   /** US AQI scale. */
   aqi: number;
@@ -85,6 +105,11 @@ export interface WeatherPayload {
   hourly: HourlyPoint[];
   daily: DailyPoint[];
   air: AirQuality | null;
+  /** Next ~2 hours of precipitation, when the provider supports it. */
+  minutely?: MinutelyPoint[];
+  /** Active severe weather warnings (OpenWeatherMap only). */
+  alerts?: WeatherAlert[];
+
   /** Display epoch of the moment the data was fetched. */
   fetchedAt: number;
   /** Which upstream provider answered. */
