@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "motion/react";
 import { Clock, MoonStar, Sunrise, Sunset } from "lucide-react";
 
+import { SkyArc } from "@/components/weather/SkyArc";
 import { formatClock, formatDate, formatWeekday } from "@/lib/weather-format";
 import type { CurrentWeather } from "@/lib/weather-types";
 
