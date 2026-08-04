@@ -77,20 +77,24 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "NowCast — Weather Dashboard" },
+      { title: "NowCast" },
       {
         name: "description",
         content:
-          "NowCast: a bold weather dashboard with live conditions, hourly and 7-day forecasts, air quality and temperature trends.",
+          "NowCast is a bold weather dashboard with current conditions, hourly and 7-day forecasts, air quality, UV index and interactive temperature trends.",
       },
-      { property: "og:title", content: "NowCast — Weather Dashboard" },
+      { property: "og:title", content: "NowCast" },
       {
         property: "og:description",
         content:
-          "Live conditions, hourly and 7-day forecasts, air quality and temperature trends for any city.",
+          "NowCast is a bold weather dashboard with current conditions, hourly and 7-day forecasts, air quality, UV index and interactive temperature trends.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "NowCast" },
+      { name: "twitter:description", content: "NowCast is a bold weather dashboard with current conditions, hourly and 7-day forecasts, air quality, UV index and interactive temperature trends." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f017b2fd-d372-452d-a981-72c37c3f2a81/id-preview-a60b56a3--1bb4afd5-985c-4ec1-8f23-56abece3cfc5.lovable.app-1785837278760.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/f017b2fd-d372-452d-a981-72c37c3f2a81/id-preview-a60b56a3--1bb4afd5-985c-4ec1-8f23-56abece3cfc5.lovable.app-1785837278760.png" },
     ],
     links: [
       {

@@ -47,17 +47,17 @@ function weatherQuery(lookup: Lookup) {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "NowCast — Live Weather Dashboard & 7-Day Forecast" },
+      { title: "NowCast" },
       {
         name: "description",
         content:
           "NowCast is a bold weather dashboard with current conditions, hourly and 7-day forecasts, air quality, UV index and interactive temperature trends.",
       },
-      { property: "og:title", content: "NowCast — Live Weather Dashboard" },
+      { property: "og:title", content: "NowCast" },
       {
         property: "og:description",
         content:
-          "Search any city or use your location for current conditions, hourly and 7-day forecasts, air quality and temperature trends.",
+          "NowCast is a bold weather dashboard with current conditions, hourly and 7-day forecasts, air quality, UV index and interactive temperature trends.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
