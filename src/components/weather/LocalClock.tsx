@@ -101,29 +101,9 @@ export function LocalClock({ fetchedAt, current, place }: LocalClockProps) {
         </div>
       </div>
 
-      {/* Day progress: sunrise -> sunset */}
-      <div className="mt-6">
-        <div
-          className="brut-flat relative h-4 overflow-hidden bg-secondary"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={Math.round(progress * 100)}
-          aria-label="Progress through daylight hours"
-        >
-          <motion.div
-            className="absolute inset-y-0 left-0 bg-sun"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress * 100}%` }}
-            transition={{ duration: 0.8, ease: "easeOut" }}
-          />
-        </div>
-        <div className="mt-2 flex justify-between font-mono text-[0.6rem] font-bold uppercase tracking-widest text-muted-foreground">
-          <span>Sunrise {formatClock(current.sunrise)}</span>
-          <span>{current.isDay ? "Daylight" : "Night"}</span>
-          <span>Sunset {formatClock(current.sunset)}</span>
-        </div>
-      </div>
+      {/* Sun path arc (day) / moon phase (night) */}
+      <SkyArc current={current} localNow={localNow} />
+
     </motion.section>
   );
 }
