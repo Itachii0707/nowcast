@@ -1,4 +1,4 @@
-# Atmosphere
+# NowCast
 
 A neubrutalist weather dashboard: live conditions, hourly and 7-day forecasts, air quality, UV, and an interactive temperature trend chart. Built with TanStack Start (React), Tailwind CSS v4, Motion, and Chart.js.
 

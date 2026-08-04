@@ -14,7 +14,7 @@ const COPY: Record<WeatherErrorCode, { title: string; body: string }> = {
   },
   missing_key: {
     title: "Weather key not configured",
-    body: "The premium provider key is missing or inactive, so Atmosphere fell back to its keyless data source.",
+    body: "The premium provider key is missing or inactive, so NowCast fell back to its keyless data source.",
   },
   network: {
     title: "Weather service unreachable",
@@ -22,7 +22,7 @@ const COPY: Record<WeatherErrorCode, { title: string; body: string }> = {
   },
   geolocation_denied: {
     title: "Location permission denied",
-    body: "Atmosphere can't read your position. Allow location access in your browser, or search for a city instead.",
+    body: "NowCast can't read your position. Allow location access in your browser, or search for a city instead.",
   },
   unknown: {
     title: "Something went sideways",
