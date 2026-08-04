@@ -13,7 +13,13 @@ A neubrutalist weather dashboard: live conditions, hourly and 7-day forecasts, a
 - Air quality index with pollutant breakdown
 - Recent searches and favourite cities in `localStorage`, individually removable
 - Loading skeletons, graceful errors (bad city, denied location, missing key, network failure)
+- Background gradients and weather icons cross-fade whenever the condition or day/night state changes
+- Live local clock with a sun-path arc and moon-phase badge at night
+- Rain radar timeline: next 2 hours of precipitation with a plain-language headline
+- Severe weather alert banners (collapsible, OpenWeatherMap only)
+- Activity index: running / cycling / beach / stargazing suitability scores
 - Background, palette, and ambient animations adapt to weather condition and day/night
+- Respects `prefers-reduced-motion` — decorative motion is skipped entirely
 - Dark mode + °C/°F toggle, both persisted
 - "Last updated" timestamp and a refresh button
 - Responsive and accessible: semantic landmarks, ARIA labels, live region, keyboard-scrollable forecast
