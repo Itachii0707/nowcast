@@ -9,6 +9,8 @@ import { CurrentCard } from "@/components/weather/CurrentCard";
 import { DailyList } from "@/components/weather/DailyList";
 import { ErrorCard } from "@/components/weather/ErrorCard";
 import { HourlyStrip } from "@/components/weather/HourlyStrip";
+import { InsightPanel } from "@/components/weather/InsightPanel";
+import { LocalClock } from "@/components/weather/LocalClock";
 import { MetricTiles } from "@/components/weather/MetricTiles";
 import { PlacesRail } from "@/components/weather/PlacesRail";
 import { SearchBar } from "@/components/weather/SearchBar";
@@ -42,13 +44,13 @@ function weatherQuery(lookup: Lookup) {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Atmosphere — Live Weather Dashboard & 7-Day Forecast" },
+      { title: "NowCast — Live Weather Dashboard & 7-Day Forecast" },
       {
         name: "description",
         content:
-          "Atmosphere is a bold weather dashboard with current conditions, hourly and 7-day forecasts, air quality, UV index and interactive temperature trends.",
+          "NowCast is a bold weather dashboard with current conditions, hourly and 7-day forecasts, air quality, UV index and interactive temperature trends.",
       },
-      { property: "og:title", content: "Atmosphere — Live Weather Dashboard" },
+      { property: "og:title", content: "NowCast — Live Weather Dashboard" },
       {
         property: "og:description",
         content:
@@ -62,10 +64,10 @@ export const Route = createFileRoute("/")({
     // Prime the default city so SSR renders a full dashboard, not an empty state.
     context.queryClient.ensureQueryData(weatherQuery(DEFAULT_LOOKUP));
   },
-  component: AtmospherePage,
+  component: NowCastPage,
 });
 
-function AtmospherePage() {
+function NowCastPage() {
   const queryClient = useQueryClient();
   const prefs = useWeatherPrefs();
   const geo = useGeolocation();
@@ -141,7 +143,7 @@ function AtmospherePage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
             <p className="brut inline-flex items-center gap-2 bg-accent px-4 py-2 font-display text-lg uppercase tracking-tight text-accent-foreground">
               <CloudSun className="size-5" strokeWidth={3} aria-hidden="true" />
-              Atmosphere
+              NowCast
             </p>
             <p className="font-mono text-[0.65rem] font-bold uppercase tracking-widest text-foreground/70">
               Weather, loud and clear
@@ -205,6 +207,22 @@ function AtmospherePage() {
                 onRefresh={refresh}
               />
 
+              <div className="grid gap-5 lg:grid-cols-2">
+                <LocalClock
+                  fetchedAt={weather.fetchedAt}
+                  current={weather.current}
+                  place={weather.location.name}
+                />
+                <AirQualityPanel air={weather.air} />
+              </div>
+
+              <InsightPanel
+                current={weather.current}
+                hourly={weather.hourly}
+                daily={weather.daily}
+                unit={prefs.unit}
+              />
+
               <MetricTiles current={weather.current} unit={prefs.unit} />
 
               <HourlyStrip hourly={weather.hourly} unit={prefs.unit} />
@@ -216,10 +234,7 @@ function AtmospherePage() {
                 dark={prefs.dark}
               />
 
-              <div className="grid gap-5 lg:grid-cols-2">
-                <DailyList daily={weather.daily} unit={prefs.unit} />
-                <AirQualityPanel air={weather.air} />
-              </div>
+              <DailyList daily={weather.daily} unit={prefs.unit} />
             </>
           )}
 
@@ -236,7 +251,7 @@ function AtmospherePage() {
         </main>
 
         <footer className="mt-10 border-t-3 border-ink pt-4 font-mono text-[0.65rem] font-bold uppercase tracking-widest text-foreground/70">
-          Atmosphere · forecast data via {weather?.source ?? "open-meteo"} · built as a portfolio
+          NowCast · forecast data via {weather?.source ?? "open-meteo"} · built as a portfolio
           dashboard
         </footer>
       </div>
