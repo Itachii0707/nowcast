@@ -29,7 +29,7 @@ function AlertRow({ alert }: { alert: WeatherAlert }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="brut-card overflow-hidden bg-sun">
+    <div className="brut overflow-hidden bg-sun">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}

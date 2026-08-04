@@ -20,7 +20,7 @@ export function ActivityIndex({ current }: { current: CurrentWeather }) {
   const scores = activityScores(current);
 
   return (
-    <section aria-labelledby="activity-heading" className="brut-card bg-card p-5">
+    <section aria-labelledby="activity-heading" className="brut bg-card p-5">
       <div className="flex items-center gap-2">
         <Activity className="size-5" strokeWidth={3} aria-hidden="true" />
         <h2 id="activity-heading" className="font-display text-lg uppercase tracking-tight">

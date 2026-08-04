@@ -25,7 +25,7 @@ export function RainTimeline({ points, localNow }: RainTimelineProps) {
   const scale = Math.max(0.4, summary.peak);
 
   return (
-    <section aria-labelledby="rain-heading" className="brut-card bg-card p-5">
+    <section aria-labelledby="rain-heading" className="brut bg-card p-5">
       <div className="flex items-center gap-2">
         <Droplets className="size-5 text-rain" strokeWidth={3} aria-hidden="true" />
         <h2 id="rain-heading" className="font-display text-lg uppercase tracking-tight">
