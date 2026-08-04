@@ -40,8 +40,8 @@ export function LocalClock({ fetchedAt, current, place }: LocalClockProps) {
   }, [offset]);
 
   const seconds = Math.floor(localNow / 1000) % 60;
-  const dayLength = Math.max(1, current.sunset - current.sunrise);
-  const progress = Math.min(1, Math.max(0, (localNow - current.sunrise) / dayLength));
+
+
 
   const nextEvent =
     localNow < current.sunrise
