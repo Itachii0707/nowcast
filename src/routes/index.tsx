@@ -3,9 +3,12 @@ import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { CloudSun } from "lucide-react";
 
+import { ActivityIndex } from "@/components/weather/ActivityIndex";
+import { AlertBanner } from "@/components/weather/AlertBanner";
 import { Ambience } from "@/components/weather/Ambience";
 import { AirQualityPanel } from "@/components/weather/AirQualityPanel";
 import { CurrentCard } from "@/components/weather/CurrentCard";
+import { RainTimeline } from "@/components/weather/RainTimeline";
 import { DailyList } from "@/components/weather/DailyList";
 import { ErrorCard } from "@/components/weather/ErrorCard";
 import { HourlyStrip } from "@/components/weather/HourlyStrip";
