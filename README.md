@@ -249,7 +249,3 @@ node .output/server/index.mjs
 - **Ultra-Fast Bundling:** Production compilation finishes in under 500ms with zero bundle bloat.
 
 ---
-
-## 📄 License
-
-This project is licensed under the **MIT License**. Feel free to use, modify, and distribute it.
