@@ -19,14 +19,18 @@ const QUARTER = 15 * 60 * 1000;
 
 interface LocalClockProps {
   fetchedAt: number;
+  timezoneOffset?: number;
   current: CurrentWeather;
   place: string;
 }
 
-export function LocalClock({ fetchedAt, current, place }: LocalClockProps) {
+export function LocalClock({ fetchedAt, timezoneOffset, current, place }: LocalClockProps) {
   const offset = useMemo(
-    () => Math.round((fetchedAt - Date.now()) / QUARTER) * QUARTER,
-    [fetchedAt],
+    () =>
+      timezoneOffset != null
+        ? timezoneOffset * 1000
+        : Math.round((fetchedAt - Date.now()) / QUARTER) * QUARTER,
+    [fetchedAt, timezoneOffset],
   );
 
   // Start from the payload instant so SSR and first paint agree, then tick.
@@ -41,14 +45,24 @@ export function LocalClock({ fetchedAt, current, place }: LocalClockProps) {
 
   const seconds = Math.floor(localNow / 1000) % 60;
 
-
-
   const nextEvent =
     localNow < current.sunrise
-      ? { label: "Sunrise in", at: current.sunrise, icon: <Sunrise className="size-4" strokeWidth={3} aria-hidden="true" /> }
+      ? {
+          label: "Sunrise in",
+          at: current.sunrise,
+          icon: <Sunrise className="size-4" strokeWidth={3} aria-hidden="true" />,
+        }
       : localNow < current.sunset
-        ? { label: "Sunset in", at: current.sunset, icon: <Sunset className="size-4" strokeWidth={3} aria-hidden="true" /> }
-        : { label: "Sunrise in", at: current.sunrise + 86400000, icon: <MoonStar className="size-4" strokeWidth={3} aria-hidden="true" /> };
+        ? {
+            label: "Sunset in",
+            at: current.sunset,
+            icon: <Sunset className="size-4" strokeWidth={3} aria-hidden="true" />,
+          }
+        : {
+            label: "Sunrise in",
+            at: current.sunrise + 86400000,
+            icon: <MoonStar className="size-4" strokeWidth={3} aria-hidden="true" />,
+          };
 
   const remaining = Math.max(0, nextEvent.at - localNow);
   const hrs = Math.floor(remaining / 3600000);
@@ -104,7 +118,6 @@ export function LocalClock({ fetchedAt, current, place }: LocalClockProps) {
 
       {/* Sun path arc (day) / moon phase (night) */}
       <SkyArc current={current} localNow={localNow} />
-
     </motion.section>
   );
 }

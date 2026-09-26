@@ -18,9 +18,9 @@ import type {
   MinutelyPoint,
   WeatherAlert,
   WeatherCondition,
-
   WeatherLocation,
   WeatherPayload,
+  PlaceSuggestion,
 } from "./weather-types";
 
 /* ------------------------------------------------------------------ *
@@ -70,9 +70,7 @@ function owmCondition(id: number, description?: string): WeatherCondition {
   else if (id >= 600 && id < 700) group = "snow";
   else if (id >= 700 && id < 800) group = "fog";
   else if (id === 800) group = "clear";
-  const label = description
-    ? description.charAt(0).toUpperCase() + description.slice(1)
-    : group;
+  const label = description ? description.charAt(0).toUpperCase() + description.slice(1) : group;
   return { group, label };
 }
 
@@ -130,43 +128,93 @@ export class ProviderError extends Error {
 }
 
 /* ------------------------------------------------------------------ *
- * Geocoding
+ * Geocoding & Place Resolution
  * ------------------------------------------------------------------ */
 
-/** Resolve a free-text place / airport name to coordinates. */
+/** Resolve a free-text place / region / airport name to coordinates. */
 export async function geocode(query: string, apiKey?: string): Promise<WeatherLocation> {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    throw new ProviderError("not_found", "Please enter a location name.");
+  }
+
+  // 1. Try OpenWeatherMap geocoder if an API key is available
   if (apiKey) {
-    const results = (await getJson(
-      `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(query)}&limit=1&appid=${apiKey}`,
-    )) as Array<{ name: string; country: string; lat: number; lon: number }>;
-    const hit = results?.[0];
-    if (hit) {
-      return { name: hit.name, country: hit.country, lat: hit.lat, lon: hit.lon };
+    try {
+      const results = (await getJson(
+        `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(trimmed)}&limit=1&appid=${apiKey}`,
+      )) as Array<{ name: string; country: string; lat: number; lon: number }>;
+      const hit = results?.[0];
+      if (hit) {
+        return { name: hit.name, country: hit.country, lat: hit.lat, lon: hit.lon };
+      }
+    } catch {
+      // Continue to next provider
     }
   }
 
-  const data = (await getJson(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`,
-  )) as {
-    results?: Array<{
-      name: string;
-      country_code?: string;
-      country?: string;
-      latitude: number;
-      longitude: number;
-      admin1?: string;
-    }>;
-  };
-  const hit = data.results?.[0];
-  if (!hit) {
-    throw new ProviderError("not_found", `We couldn't find "${query}".`);
+  // 2. Try Photon (OSM geocoding by Komoot) - handles states ("Bihar"), multi-word ("Bihar India"), regions, cities
+  try {
+    const photon = (await getJson(
+      `https://photon.komoot.io/api/?q=${encodeURIComponent(trimmed)}&limit=1&lang=en`,
+    )) as {
+      features?: Array<{
+        properties: {
+          name: string;
+          country?: string;
+          countrycode?: string;
+          state?: string;
+        };
+        geometry: { coordinates: [number, number] };
+      }>;
+    };
+    const hit = photon?.features?.[0];
+    if (hit && hit.geometry?.coordinates) {
+      const [lon, lat] = hit.geometry.coordinates;
+      const p = hit.properties;
+      const displayCountry = (p.countrycode ?? p.country ?? "").toUpperCase();
+      return {
+        name: p.name,
+        country: displayCountry,
+        lat,
+        lon,
+      };
+    }
+  } catch {
+    // Continue to Open-Meteo fallback
   }
-  return {
-    name: hit.name,
-    country: hit.country_code ?? hit.country ?? "",
-    lat: hit.latitude,
-    lon: hit.longitude,
-  };
+
+  // 3. Fallback to Open-Meteo Geocoding
+  try {
+    const data = (await getJson(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=1&language=en&format=json`,
+    )) as {
+      results?: Array<{
+        name: string;
+        country_code?: string;
+        country?: string;
+        latitude: number;
+        longitude: number;
+        admin1?: string;
+      }>;
+    };
+    const hit = data.results?.[0];
+    if (hit) {
+      return {
+        name: hit.name,
+        country: (hit.country_code ?? hit.country ?? "").toUpperCase(),
+        lat: hit.latitude,
+        lon: hit.longitude,
+      };
+    }
+  } catch {
+    // Continue to error throw
+  }
+
+  throw new ProviderError(
+    "not_found",
+    `We couldn't find "${query}". Try searching a city, state, or country name.`,
+  );
 }
 
 /** Best-effort reverse geocoding for browser geolocation coordinates. */
@@ -187,12 +235,103 @@ export async function reverseGeocode(
         `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`,
       )) as { city?: string; locality?: string; countryCode?: string };
       const name = data.city || data.locality;
-      if (name) return { name, country: data.countryCode ?? "", lat, lon };
+      if (name) return { name, country: (data.countryCode ?? "").toUpperCase(), lat, lon };
     }
   } catch {
     // Naming is cosmetic — never fail the whole request over it.
   }
   return { name: "Your location", country: "", lat, lon };
+}
+
+/** Fast typeahead search for city/place/state suggestions */
+export async function searchPlaces(query: string): Promise<PlaceSuggestion[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+
+  // 1. Try Photon for comprehensive matching (cities, states, regions, countries)
+  try {
+    const photonData = (await getJson(
+      `https://photon.komoot.io/api/?q=${encodeURIComponent(trimmed)}&limit=6&lang=en`,
+    )) as {
+      features?: Array<{
+        properties: {
+          osm_id: number;
+          name: string;
+          country?: string;
+          countrycode?: string;
+          state?: string;
+          city?: string;
+          type?: string;
+        };
+        geometry: { coordinates: [number, number] };
+      }>;
+    };
+
+    if (photonData.features?.length) {
+      const suggestions: PlaceSuggestion[] = [];
+      const seen = new Set<string>();
+
+      for (const f of photonData.features) {
+        if (!f.properties?.name || !f.geometry?.coordinates) continue;
+        const p = f.properties;
+        const [lon, lat] = f.geometry.coordinates;
+        const countryCode = (p.countrycode ?? "").toUpperCase();
+        const admin1 = p.state || (p.city && p.city !== p.name ? p.city : undefined);
+        const key = `${p.name.toLowerCase()}-${(admin1 ?? "").toLowerCase()}-${countryCode}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        suggestions.push({
+          id: p.osm_id ?? Math.floor(Math.random() * 1000000),
+          name: p.name,
+          admin1,
+          country: p.country ?? countryCode,
+          countryCode,
+          lat,
+          lon,
+        });
+      }
+
+      if (suggestions.length > 0) {
+        return suggestions;
+      }
+    }
+  } catch {
+    // Fall back to Open-Meteo
+  }
+
+  // 2. Open-Meteo fallback
+  try {
+    const data = (await getJson(
+      `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=6&language=en&format=json`,
+    )) as {
+      results?: Array<{
+        id: number;
+        name: string;
+        country_code?: string;
+        country?: string;
+        latitude: number;
+        longitude: number;
+        admin1?: string;
+        population?: number;
+      }>;
+    };
+
+    if (!data.results?.length) return [];
+
+    return data.results.map((hit) => ({
+      id: hit.id,
+      name: hit.name,
+      admin1: hit.admin1,
+      country: hit.country ?? hit.country_code ?? "",
+      countryCode: (hit.country_code ?? "").toUpperCase(),
+      lat: hit.latitude,
+      lon: hit.longitude,
+      population: hit.population,
+    }));
+  } catch {
+    return [];
+  }
 }
 
 /* ------------------------------------------------------------------ *
@@ -225,6 +364,7 @@ interface OpenMeteoForecast {
     temperature_2m: number[];
     weather_code: number[];
     precipitation_probability: number[];
+    is_day?: number[];
     visibility?: number[];
   };
   daily: {
@@ -236,6 +376,8 @@ interface OpenMeteoForecast {
     sunrise: string[];
     sunset: string[];
     uv_index_max: number[];
+    precipitation_sum?: number[];
+    wind_speed_10m_max?: number[];
   };
 }
 
@@ -256,17 +398,16 @@ function minutelyFromOpenMeteo(
 }
 
 async function fetchOpenMeteo(location: WeatherLocation): Promise<WeatherPayload> {
-
   const params = new URLSearchParams({
     latitude: String(location.lat),
     longitude: String(location.lon),
     current:
       "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,uv_index",
     minutely_15: "precipitation",
-    hourly: "temperature_2m,weather_code,precipitation_probability",
+    hourly: "temperature_2m,weather_code,precipitation_probability,is_day",
 
     daily:
-      "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max",
+      "weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max,precipitation_sum,wind_speed_10m_max",
     timezone: "auto",
     forecast_days: "7",
     wind_speed_unit: "ms",
@@ -292,18 +433,23 @@ async function fetchOpenMeteo(location: WeatherLocation): Promise<WeatherPayload
         temp: forecast.hourly.temperature_2m[index] ?? 0,
         condition: wmoCondition(forecast.hourly.weather_code[index] ?? 0),
         pop: forecast.hourly.precipitation_probability[index] ?? 0,
+        isDay: forecast.hourly.is_day ? forecast.hourly.is_day[index] === 1 : undefined,
       };
     });
 
   const minutely = minutelyFromOpenMeteo(forecast, nowEpoch);
 
   const daily: DailyPoint[] = forecast.daily.time.map((time, i) => ({
-
     time: localIsoToEpoch(time),
     min: forecast.daily.temperature_2m_min[i] ?? 0,
     max: forecast.daily.temperature_2m_max[i] ?? 0,
     condition: wmoCondition(forecast.daily.weather_code[i] ?? 0),
     pop: forecast.daily.precipitation_probability_max[i] ?? 0,
+    uvMax: forecast.daily.uv_index_max?.[i],
+    sunrise: forecast.daily.sunrise?.[i] ? localIsoToEpoch(forecast.daily.sunrise[i]) : undefined,
+    sunset: forecast.daily.sunset?.[i] ? localIsoToEpoch(forecast.daily.sunset[i]) : undefined,
+    precipSum: forecast.daily.precipitation_sum?.[i],
+    windMax: forecast.daily.wind_speed_10m_max?.[i],
   }));
 
   return {
@@ -331,8 +477,9 @@ async function fetchOpenMeteo(location: WeatherLocation): Promise<WeatherPayload
     ...(minutely ? { minutely } : {}),
     air: await fetchOpenMeteoAir(location),
 
-
     fetchedAt: Date.now() + forecast.utc_offset_seconds * 1000,
+    rawFetchedAt: Date.now(),
+    timezoneOffset: forecast.utc_offset_seconds,
     source: "open-meteo",
   };
 }
@@ -411,6 +558,10 @@ interface OwmOneCall {
     temp: { min: number; max: number };
     pop: number;
     weather: Array<{ id: number; description: string }>;
+    uvi?: number;
+    sunrise?: number;
+    sunset?: number;
+    wind_speed?: number;
   }>;
 }
 
@@ -421,7 +572,6 @@ async function fetchOpenWeather(
   const data = (await getJson(
     `https://api.openweathermap.org/data/3.0/onecall?lat=${location.lat}&lon=${location.lon}&units=metric&appid=${apiKey}`,
   )) as OwmOneCall;
-
 
   const offset = data.timezone_offset;
   const currentWeather = data.current.weather[0];
@@ -444,18 +594,26 @@ async function fetchOpenWeather(
       sunset: shift(data.current.sunset, offset),
       isDay: data.current.dt >= data.current.sunrise && data.current.dt < data.current.sunset,
     },
-    hourly: data.hourly.slice(0, 24).map((hour) => ({
-      time: shift(hour.dt, offset),
-      temp: hour.temp,
-      condition: owmCondition(hour.weather[0]?.id ?? 800, hour.weather[0]?.description),
-      pop: Math.round((hour.pop ?? 0) * 100),
-    })),
+    hourly: data.hourly.slice(0, 24).map((hour) => {
+      const localHour = new Date(shift(hour.dt, offset)).getUTCHours();
+      return {
+        time: shift(hour.dt, offset),
+        temp: hour.temp,
+        condition: owmCondition(hour.weather[0]?.id ?? 800, hour.weather[0]?.description),
+        pop: Math.round((hour.pop ?? 0) * 100),
+        isDay: localHour >= 6 && localHour < 20,
+      };
+    }),
     daily: data.daily.slice(0, 7).map((day) => ({
       time: shift(day.dt, offset),
       min: day.temp.min,
       max: day.temp.max,
       condition: owmCondition(day.weather[0]?.id ?? 800, day.weather[0]?.description),
       pop: Math.round((day.pop ?? 0) * 100),
+      uvMax: day.uvi,
+      sunrise: day.sunrise != null ? shift(day.sunrise, offset) : undefined,
+      sunset: day.sunset != null ? shift(day.sunset, offset) : undefined,
+      windMax: day.wind_speed,
     })),
     ...(data.minutely?.length
       ? {
@@ -479,14 +637,13 @@ async function fetchOpenWeather(
     air: await fetchOwmAir(location, apiKey),
 
     fetchedAt: Date.now() + offset * 1000,
+    rawFetchedAt: Date.now(),
+    timezoneOffset: offset,
     source: "openweathermap",
   };
 }
 
-async function fetchOwmAir(
-  location: WeatherLocation,
-  apiKey: string,
-): Promise<AirQuality | null> {
+async function fetchOwmAir(location: WeatherLocation, apiKey: string): Promise<AirQuality | null> {
   try {
     const data = (await getJson(
       `https://api.openweathermap.org/data/2.5/air_pollution?lat=${location.lat}&lon=${location.lon}&appid=${apiKey}`,
@@ -532,10 +689,7 @@ export interface WeatherLookup {
  * Resolve the requested place and load its weather, preferring
  * OpenWeatherMap when a key is configured and falling back to Open-Meteo.
  */
-export async function loadWeather(
-  lookup: WeatherLookup,
-  apiKey?: string,
-): Promise<WeatherPayload> {
+export async function loadWeather(lookup: WeatherLookup, apiKey?: string): Promise<WeatherPayload> {
   let location: WeatherLocation;
 
   if (lookup.lat != null && lookup.lon != null) {

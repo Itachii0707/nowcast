@@ -9,13 +9,7 @@ import { WeatherIcon } from "./WeatherIcon";
 import { formatHour, formatTemp, type TemperatureUnit } from "@/lib/weather-format";
 import type { HourlyPoint } from "@/lib/weather-types";
 
-export function HourlyStrip({
-  hourly,
-  unit,
-}: {
-  hourly: HourlyPoint[];
-  unit: TemperatureUnit;
-}) {
+export function HourlyStrip({ hourly, unit }: { hourly: HourlyPoint[]; unit: TemperatureUnit }) {
   return (
     <motion.section
       initial={{ opacity: 0, y: 16 }}
@@ -46,7 +40,7 @@ export function HourlyStrip({
             <p className="font-mono text-[0.7rem] font-bold uppercase">
               {index === 0 ? "Now" : `${formatHour(hour.time)}:00`}
             </p>
-            <WeatherIcon group={hour.condition.group} className="size-7" still />
+            <WeatherIcon group={hour.condition.group} isDay={hour.isDay} className="size-7" still />
             <p className="font-display text-lg leading-none">{formatTemp(hour.temp, unit)}</p>
             <p className="inline-flex items-center gap-1 font-mono text-[0.6rem] font-bold text-rain">
               <Droplet className="size-3" strokeWidth={3} aria-hidden="true" />

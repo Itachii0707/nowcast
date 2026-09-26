@@ -7,11 +7,11 @@ import { motion } from "motion/react";
 import type { AirQuality } from "@/lib/weather-types";
 
 function aqiAccent(aqi: number): string {
-  if (aqi <= 50) return "bg-lime";
-  if (aqi <= 100) return "bg-sun";
-  if (aqi <= 150) return "bg-hot";
-  if (aqi <= 200) return "bg-destructive text-destructive-foreground";
-  return "bg-storm";
+  if (aqi <= 50) return "bg-lime text-black font-black";
+  if (aqi <= 100) return "bg-sun text-black font-black";
+  if (aqi <= 150) return "bg-hot text-black font-black";
+  if (aqi <= 200) return "bg-destructive text-white font-black";
+  return "bg-storm text-white font-black";
 }
 
 const POLLUTANTS: Array<{ key: keyof AirQuality["components"]; label: string; unit: string }> = [

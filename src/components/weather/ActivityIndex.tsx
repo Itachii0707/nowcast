@@ -7,6 +7,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { Activity } from "lucide-react";
 
 import { activityScores } from "@/lib/weather-insights";
+import type { TemperatureUnit } from "@/lib/weather-format";
 import type { CurrentWeather } from "@/lib/weather-types";
 
 function tone(score: number) {
@@ -15,9 +16,15 @@ function tone(score: number) {
   return "bg-rain";
 }
 
-export function ActivityIndex({ current }: { current: CurrentWeather }) {
+export function ActivityIndex({
+  current,
+  unit = "C",
+}: {
+  current: CurrentWeather;
+  unit?: TemperatureUnit;
+}) {
   const reduced = useReducedMotion();
-  const scores = activityScores(current);
+  const scores = activityScores(current, unit);
 
   return (
     <section aria-labelledby="activity-heading" className="brut bg-card p-5">

@@ -6,7 +6,12 @@ import { motion } from "motion/react";
 import { RotateCw, Star, Thermometer } from "lucide-react";
 
 import { WeatherIcon } from "./WeatherIcon";
-import { formatClock, formatRelative, formatTemp, type TemperatureUnit } from "@/lib/weather-format";
+import {
+  formatClock,
+  formatRelative,
+  formatTemp,
+  type TemperatureUnit,
+} from "@/lib/weather-format";
 import type { WeatherPayload } from "@/lib/weather-types";
 
 interface CurrentCardProps {
@@ -59,8 +64,8 @@ export function CurrentCard({
             onClick={onToggleFavorite}
             aria-pressed={isFavorite}
             aria-label={isFavorite ? "Remove from favourites" : "Save to favourites"}
-            className={`brut-sm brut-press inline-flex items-center gap-2 px-3 py-2 font-mono text-xs font-bold uppercase ${
-              isFavorite ? "bg-sun text-ink" : "bg-card"
+            className={`brut-sm brut-press inline-flex items-center gap-2 px-3 py-2 font-mono text-xs uppercase ${
+              isFavorite ? "bg-sun text-black font-black" : "bg-card text-foreground font-bold"
             }`}
           >
             <Star
@@ -109,15 +114,15 @@ export function CurrentCard({
         </div>
 
         <div className="brut-flat flex items-center gap-4 bg-secondary px-5 py-4">
-          <WeatherIcon
-            group={current.condition.group}
-            isDay={current.isDay}
-            className="size-14"
-          />
+          <WeatherIcon group={current.condition.group} isDay={current.isDay} className="size-14" />
           <div className="font-mono text-[0.7rem] font-bold uppercase leading-relaxed">
             <p>{current.isDay ? "Daytime" : "Night"}</p>
             <p className="text-muted-foreground">
-              Updated {formatRelative(weather.fetchedAt, now)}
+              Updated{" "}
+              {formatRelative(
+                weather.rawFetchedAt ?? weather.fetchedAt - (weather.timezoneOffset ?? 0) * 1000,
+                now,
+              )}
             </p>
             <p className="text-muted-foreground">via {weather.source}</p>
           </div>

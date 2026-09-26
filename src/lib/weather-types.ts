@@ -8,13 +8,7 @@
  */
 
 /** Coarse condition families we style and animate against. */
-export type ConditionGroup =
-  | "clear"
-  | "clouds"
-  | "rain"
-  | "snow"
-  | "storm"
-  | "fog";
+export type ConditionGroup = "clear" | "clouds" | "rain" | "snow" | "storm" | "fog";
 
 export interface WeatherCondition {
   group: ConditionGroup;
@@ -58,6 +52,8 @@ export interface HourlyPoint {
   condition: WeatherCondition;
   /** Precipitation probability, 0-100. */
   pop: number;
+  /** Whether this hour falls during daytime at the location. */
+  isDay?: boolean | undefined;
 }
 
 export interface DailyPoint {
@@ -66,6 +62,11 @@ export interface DailyPoint {
   max: number;
   condition: WeatherCondition;
   pop: number;
+  uvMax?: number | undefined;
+  sunrise?: number | undefined;
+  sunset?: number | undefined;
+  precipSum?: number | undefined;
+  windMax?: number | undefined;
 }
 
 /** Short-range precipitation point (15-minute or 1-minute resolution). */
@@ -83,7 +84,6 @@ export interface WeatherAlert {
   end: number;
   sender?: string;
 }
-
 
 export interface AirQuality {
   /** US AQI scale. */
@@ -112,20 +112,19 @@ export interface WeatherPayload {
 
   /** Display epoch of the moment the data was fetched. */
   fetchedAt: number;
+  /** Real UTC epoch timestamp (Date.now()) when the payload was created. */
+  rawFetchedAt: number;
+  /** Timezone offset in seconds from UTC. */
+  timezoneOffset: number;
   /** Which upstream provider answered. */
   source: "openweathermap" | "open-meteo";
 }
 
 export type WeatherErrorCode =
-  | "not_found"
-  | "missing_key"
-  | "network"
-  | "geolocation_denied"
-  | "unknown";
+  "not_found" | "missing_key" | "network" | "geolocation_denied" | "unknown";
 
 export type WeatherResult =
-  | { ok: true; data: WeatherPayload }
-  | { ok: false; code: WeatherErrorCode; message: string };
+  { ok: true; data: WeatherPayload } | { ok: false; code: WeatherErrorCode; message: string };
 
 /** A saved / recent place. */
 export interface SavedPlace {
@@ -133,4 +132,16 @@ export interface SavedPlace {
   country: string;
   lat: number;
   lon: number;
+}
+
+/** Autocomplete suggestion from geocoding. */
+export interface PlaceSuggestion {
+  id: number;
+  name: string;
+  admin1?: string | undefined;
+  country: string;
+  countryCode: string;
+  lat: number;
+  lon: number;
+  population?: number | undefined;
 }

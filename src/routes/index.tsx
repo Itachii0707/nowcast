@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { CloudSun } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { CalendarDays, Layers, LayoutDashboard, Radar, Wind } from "lucide-react";
 
 import { ActivityIndex } from "@/components/weather/ActivityIndex";
 import { AlertBanner } from "@/components/weather/AlertBanner";
@@ -16,9 +17,12 @@ import { InsightPanel } from "@/components/weather/InsightPanel";
 import { LocalClock } from "@/components/weather/LocalClock";
 import { MetricTiles } from "@/components/weather/MetricTiles";
 import { PlacesRail } from "@/components/weather/PlacesRail";
+import { RadarMap } from "@/components/weather/RadarMap";
 import { SearchBar } from "@/components/weather/SearchBar";
 import { DashboardSkeleton } from "@/components/weather/Skeletons";
 import { TrendChart } from "@/components/weather/TrendChart";
+import { NowCastLogo } from "@/components/weather/NowCastLogo";
+import { IntroBootSequence } from "@/components/weather/IntroBootSequence";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { samePlace, useWeatherPrefs } from "@/hooks/useWeatherPrefs";
 import { skyKey } from "@/lib/weather-format";
@@ -29,12 +33,28 @@ import type { SavedPlace, WeatherResult } from "@/lib/weather-types";
 const DEFAULT_LOOKUP = { query: "Lisbon" } as const;
 
 interface Lookup {
-  query?: string;
-  lat?: number;
-  lon?: number;
-  name?: string;
-  country?: string;
+  query?: string | undefined;
+  lat?: number | undefined;
+  lon?: number | undefined;
+  name?: string | undefined;
+  country?: string | undefined;
 }
+
+type ViewTab = "overview" | "radar" | "forecast" | "air" | "all";
+
+interface TabItem {
+  id: ViewTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>;
+}
+
+const VIEW_TABS: TabItem[] = [
+  { id: "overview", label: "Overview", icon: LayoutDashboard },
+  { id: "radar", label: "Live Radar", icon: Radar },
+  { id: "forecast", label: "7-Day Outlook", icon: CalendarDays },
+  { id: "air", label: "Air & Health", icon: Wind },
+  { id: "all", label: "Full View", icon: Layers },
+];
 
 function weatherQuery(lookup: Lookup) {
   return queryOptions({
@@ -47,25 +67,25 @@ function weatherQuery(lookup: Lookup) {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "NowCast" },
+      { title: "NowCast — Weather, Loud and Clear" },
       {
         name: "description",
         content:
-          "NowCast is a bold weather dashboard with current conditions, hourly and 7-day forecasts, air quality, UV index and interactive temperature trends.",
+          "NowCast is a bold weather dashboard with current conditions, live Doppler radar, 7-day synoptic forecast, air quality analytics, and interactive temperature trends.",
       },
       { property: "og:title", content: "NowCast" },
       {
         property: "og:description",
         content:
-          "NowCast is a bold weather dashboard with current conditions, hourly and 7-day forecasts, air quality, UV index and interactive temperature trends.",
+          "NowCast is a bold weather dashboard with current conditions, live Doppler radar, 7-day synoptic forecast, air quality analytics, and interactive temperature trends.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  loader: ({ context }) => {
+  loader: async ({ context }) => {
     // Prime the default city so SSR renders a full dashboard, not an empty state.
-    context.queryClient.ensureQueryData(weatherQuery(DEFAULT_LOOKUP));
+    await context.queryClient.ensureQueryData(weatherQuery(DEFAULT_LOOKUP));
   },
   component: NowCastPage,
 });
@@ -76,7 +96,9 @@ function NowCastPage() {
   const geo = useGeolocation();
 
   const [lookup, setLookup] = useState<Lookup>(DEFAULT_LOOKUP);
+  const [activeTab, setActiveTab] = useState<ViewTab>("overview");
   const [now, setNow] = useState(() => Date.now());
+  const [showIntro, setShowIntro] = useState(false);
 
   const query = useQuery(weatherQuery(lookup));
   const result = query.data;
@@ -130,12 +152,12 @@ function NowCastPage() {
     setNow(Date.now());
   };
 
-  const sky = weather
-    ? skyKey(weather.current.condition.group, weather.current.isDay)
-    : "clouds";
+  const sky = weather ? skyKey(weather.current.condition.group, weather.current.isDay) : "clouds";
 
   return (
     <div data-sky={sky} className="min-h-screen">
+      <IntroBootSequence forceOpen={showIntro} onComplete={() => setShowIntro(false)} />
+
       <Ambience
         group={weather?.current.condition.group ?? "clouds"}
         isDay={weather?.current.isDay ?? true}
@@ -144,26 +166,65 @@ function NowCastPage() {
       <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
         <header className="space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <p className="brut inline-flex items-center gap-2 bg-accent px-4 py-2 font-display text-lg uppercase tracking-tight text-accent-foreground">
-              <CloudSun className="size-5" strokeWidth={3} aria-hidden="true" />
-              NowCast
-            </p>
-            <p className="font-mono text-[0.65rem] font-bold uppercase tracking-widest text-foreground/70">
-              Weather, loud and clear
-            </p>
+            <NowCastLogo onClick={() => setShowIntro(true)} />
+            <div className="flex items-center gap-3">
+              {query.isFetching && (
+                <span className="font-mono text-[0.65rem] font-black uppercase text-accent bg-ink px-2 py-0.5 animate-pulse">
+                  Syncing Feed...
+                </span>
+              )}
+              <p className="font-mono text-[0.65rem] font-bold uppercase tracking-widest text-foreground/70 hidden sm:block">
+                Weather, loud and clear
+              </p>
+            </div>
           </div>
 
           <SearchBar
             unit={prefs.unit}
             dark={prefs.dark}
             locating={geo.status === "locating"}
-            onSearch={(query) => setLookup({ query })}
-            onLocate={() =>
-              geo.locate((coords) => setLookup({ lat: coords.lat, lon: coords.lon }))
-            }
+            onSearch={(q) => setLookup({ query: q })}
+            onSelectPlace={selectPlace}
+            onLocate={() => geo.locate((coords) => setLookup({ lat: coords.lat, lon: coords.lon }))}
             onToggleUnit={prefs.toggleUnit}
             onToggleTheme={prefs.toggleTheme}
           />
+
+          {/* Senior UI/UX: Interactive Neubrutalist View Navigation */}
+          {weather && (
+            <nav
+              className="flex flex-wrap items-center gap-1.5 border-3 border-ink bg-card p-1 shadow-[4px_4px_0_0_var(--ink)]"
+              aria-label="Dashboard Views"
+            >
+              {VIEW_TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    aria-pressed={isActive}
+                    className={`relative flex items-center gap-2 px-3 py-1.5 sm:px-4 sm:py-2 font-mono text-xs font-bold uppercase transition-colors z-10 cursor-pointer ${
+                      isActive
+                        ? "text-accent-foreground font-black"
+                        : "text-foreground/75 hover:text-foreground hover:bg-muted/40"
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.span
+                        layoutId="active-view-tab"
+                        className="absolute inset-0 bg-accent border-2 border-ink -z-10 shadow-[2px_2px_0_0_var(--ink)]"
+                        transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                      />
+                    )}
+                    <Icon className="size-3.5 sm:size-4" strokeWidth={2.5} />
+                    <span>{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+          )}
         </header>
 
         <p aria-live="polite" className="sr-only">
@@ -172,10 +233,8 @@ function NowCastPage() {
             : "Loading weather data."}
         </p>
 
-        <main className="mt-6 space-y-5">
-          {geo.status === "denied" && (
-            <ErrorCard code="geolocation_denied" onRetry={geo.reset} />
-          )}
+        <main className="mt-6 space-y-6">
+          {geo.status === "denied" && <ErrorCard code="geolocation_denied" onRetry={geo.reset} />}
           {geo.status === "unavailable" && (
             <ErrorCard
               code="unknown"
@@ -195,62 +254,211 @@ function NowCastPage() {
           )}
 
           {result && !result.ok && (
-            <ErrorCard code={result.code} message={result.message} onRetry={refresh} />
+            <div className="space-y-3">
+              <ErrorCard
+                code={result.code}
+                message={result.message}
+                onRetry={result.code === "not_found" ? () => setLookup(DEFAULT_LOOKUP) : refresh}
+              />
+              {result.code === "not_found" && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setLookup(DEFAULT_LOOKUP)}
+                    className="brut-sm brut-press bg-accent px-3 py-1.5 font-mono text-xs font-bold uppercase text-accent-foreground"
+                  >
+                    Reset to default (Lisbon)
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {weather && (
-            <>
-              {weather.alerts?.length ? <AlertBanner alerts={weather.alerts} /> : null}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={`${activeTab}-${activeKey}`}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -14 }}
+                transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                className="space-y-6"
+              >
+                {weather.alerts?.length ? <AlertBanner alerts={weather.alerts} /> : null}
 
-              <CurrentCard
-                weather={weather}
-                unit={prefs.unit}
-                now={now}
-                isFavorite={isFavorite}
-                refreshing={query.isFetching}
-                onToggleFavorite={() => activePlace && prefs.toggleFavorite(activePlace)}
-                onRefresh={refresh}
-              />
+                {/* VIEW 1: OVERVIEW DASHBOARD */}
+                {activeTab === "overview" && (
+                  <>
+                    <CurrentCard
+                      weather={weather}
+                      unit={prefs.unit}
+                      now={now}
+                      isFavorite={isFavorite}
+                      refreshing={query.isFetching}
+                      onToggleFavorite={() => activePlace && prefs.toggleFavorite(activePlace)}
+                      onRefresh={refresh}
+                    />
 
-              <div className="grid gap-5 lg:grid-cols-2">
-                <LocalClock
-                  fetchedAt={weather.fetchedAt}
-                  current={weather.current}
-                  place={weather.location.name}
-                />
-                <AirQualityPanel air={weather.air} />
-              </div>
+                    <div className="grid gap-5 lg:grid-cols-2">
+                      <LocalClock
+                        fetchedAt={weather.fetchedAt}
+                        timezoneOffset={weather.timezoneOffset}
+                        current={weather.current}
+                        place={weather.location.name}
+                      />
+                      <AirQualityPanel air={weather.air} />
+                    </div>
 
-              {weather.minutely?.length ? (
-                <div className="grid gap-5 lg:grid-cols-2">
-                  <RainTimeline points={weather.minutely} localNow={weather.fetchedAt} />
-                  <ActivityIndex current={weather.current} />
-                </div>
-              ) : (
-                <ActivityIndex current={weather.current} />
-              )}
+                    {weather.minutely?.length ? (
+                      <div className="grid gap-5 lg:grid-cols-2">
+                        <RainTimeline points={weather.minutely} localNow={weather.fetchedAt} />
+                        <ActivityIndex current={weather.current} unit={prefs.unit} />
+                      </div>
+                    ) : (
+                      <ActivityIndex current={weather.current} unit={prefs.unit} />
+                    )}
 
-              <InsightPanel
-                current={weather.current}
-                hourly={weather.hourly}
-                daily={weather.daily}
-                unit={prefs.unit}
-              />
+                    <InsightPanel
+                      current={weather.current}
+                      hourly={weather.hourly}
+                      daily={weather.daily}
+                      unit={prefs.unit}
+                    />
 
-              <MetricTiles current={weather.current} unit={prefs.unit} />
+                    <MetricTiles current={weather.current} unit={prefs.unit} />
 
+                    <HourlyStrip hourly={weather.hourly} unit={prefs.unit} />
 
-              <HourlyStrip hourly={weather.hourly} unit={prefs.unit} />
+                    <TrendChart
+                      hourly={weather.hourly}
+                      daily={weather.daily}
+                      unit={prefs.unit}
+                      dark={prefs.dark}
+                    />
+                  </>
+                )}
 
-              <TrendChart
-                hourly={weather.hourly}
-                daily={weather.daily}
-                unit={prefs.unit}
-                dark={prefs.dark}
-              />
+                {/* VIEW 2: LIVE RADAR & SATELLITE */}
+                {activeTab === "radar" && (
+                  <>
+                    <RadarMap location={weather.location} dark={prefs.dark} />
 
-              <DailyList daily={weather.daily} unit={prefs.unit} />
-            </>
+                    <div className="grid gap-5 lg:grid-cols-2">
+                      <CurrentCard
+                        weather={weather}
+                        unit={prefs.unit}
+                        now={now}
+                        isFavorite={isFavorite}
+                        refreshing={query.isFetching}
+                        onToggleFavorite={() => activePlace && prefs.toggleFavorite(activePlace)}
+                        onRefresh={refresh}
+                      />
+                      {weather.minutely?.length ? (
+                        <RainTimeline points={weather.minutely} localNow={weather.fetchedAt} />
+                      ) : (
+                        <InsightPanel
+                          current={weather.current}
+                          hourly={weather.hourly}
+                          daily={weather.daily}
+                          unit={prefs.unit}
+                        />
+                      )}
+                    </div>
+                  </>
+                )}
+
+                {/* VIEW 3: 7-DAY SYNOPTIC OUTLOOK */}
+                {activeTab === "forecast" && (
+                  <>
+                    <DailyList daily={weather.daily} unit={prefs.unit} />
+
+                    <TrendChart
+                      hourly={weather.hourly}
+                      daily={weather.daily}
+                      unit={prefs.unit}
+                      dark={prefs.dark}
+                    />
+
+                    <HourlyStrip hourly={weather.hourly} unit={prefs.unit} />
+                  </>
+                )}
+
+                {/* VIEW 4: AIR QUALITY & HEALTH */}
+                {activeTab === "air" && (
+                  <>
+                    <AirQualityPanel air={weather.air} />
+
+                    <div className="grid gap-5 lg:grid-cols-2">
+                      <ActivityIndex current={weather.current} unit={prefs.unit} />
+                      <LocalClock
+                        fetchedAt={weather.fetchedAt}
+                        timezoneOffset={weather.timezoneOffset}
+                        current={weather.current}
+                        place={weather.location.name}
+                      />
+                    </div>
+
+                    <MetricTiles current={weather.current} unit={prefs.unit} />
+                  </>
+                )}
+
+                {/* VIEW 5: FULL EXECUTIVE VIEW */}
+                {activeTab === "all" && (
+                  <>
+                    <CurrentCard
+                      weather={weather}
+                      unit={prefs.unit}
+                      now={now}
+                      isFavorite={isFavorite}
+                      refreshing={query.isFetching}
+                      onToggleFavorite={() => activePlace && prefs.toggleFavorite(activePlace)}
+                      onRefresh={refresh}
+                    />
+
+                    <div className="grid gap-5 lg:grid-cols-2">
+                      <LocalClock
+                        fetchedAt={weather.fetchedAt}
+                        timezoneOffset={weather.timezoneOffset}
+                        current={weather.current}
+                        place={weather.location.name}
+                      />
+                      <AirQualityPanel air={weather.air} />
+                    </div>
+
+                    <RadarMap location={weather.location} dark={prefs.dark} />
+
+                    {weather.minutely?.length ? (
+                      <div className="grid gap-5 lg:grid-cols-2">
+                        <RainTimeline points={weather.minutely} localNow={weather.fetchedAt} />
+                        <ActivityIndex current={weather.current} unit={prefs.unit} />
+                      </div>
+                    ) : (
+                      <ActivityIndex current={weather.current} unit={prefs.unit} />
+                    )}
+
+                    <InsightPanel
+                      current={weather.current}
+                      hourly={weather.hourly}
+                      daily={weather.daily}
+                      unit={prefs.unit}
+                    />
+
+                    <MetricTiles current={weather.current} unit={prefs.unit} />
+
+                    <HourlyStrip hourly={weather.hourly} unit={prefs.unit} />
+
+                    <TrendChart
+                      hourly={weather.hourly}
+                      daily={weather.daily}
+                      unit={prefs.unit}
+                      dark={prefs.dark}
+                    />
+
+                    <DailyList daily={weather.daily} unit={prefs.unit} />
+                  </>
+                )}
+              </motion.div>
+            </AnimatePresence>
           )}
 
           {/* Rails stay visible even when a lookup fails, so recovery is one tap away. */}
@@ -264,11 +472,6 @@ function NowCastPage() {
             onClearRecents={prefs.clearRecents}
           />
         </main>
-
-        <footer className="mt-10 border-t-3 border-ink pt-4 font-mono text-[0.65rem] font-bold uppercase tracking-widest text-foreground/70">
-          NowCast · forecast data via {weather?.source ?? "open-meteo"} · built as a portfolio
-          dashboard
-        </footer>
       </div>
     </div>
   );

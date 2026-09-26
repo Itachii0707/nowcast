@@ -40,12 +40,21 @@ const DATE_FORMAT = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
+const MINUTE_FORMAT = new Intl.DateTimeFormat("en-GB", {
+  minute: "2-digit",
+  timeZone: "UTC",
+});
+
 export function formatClock(epoch: number): string {
   return TIME_FORMAT.format(epoch);
 }
 
 export function formatHour(epoch: number): string {
   return HOUR_FORMAT.format(epoch).replace(":", "");
+}
+
+export function formatMinute(epoch: number): string {
+  return MINUTE_FORMAT.format(epoch);
 }
 
 export function formatWeekday(epoch: number): string {
@@ -56,7 +65,24 @@ export function formatDate(epoch: number): string {
   return DATE_FORMAT.format(epoch);
 }
 
-const COMPASS = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+const COMPASS = [
+  "N",
+  "NNE",
+  "NE",
+  "ENE",
+  "E",
+  "ESE",
+  "SE",
+  "SSE",
+  "S",
+  "SSW",
+  "SW",
+  "WSW",
+  "W",
+  "WNW",
+  "NW",
+  "NNW",
+];
 
 export function windDirection(degrees: number): string {
   return COMPASS[Math.round(degrees / 22.5) % 16] ?? "N";
@@ -68,10 +94,12 @@ export function formatWind(metresPerSecond: number, unit: TemperatureUnit): stri
     : `${Math.round(metresPerSecond * 2.23694)} mph`;
 }
 
+export function formatSpeed(metresPerSecond: number, unit: TemperatureUnit): string {
+  return formatWind(metresPerSecond, unit);
+}
+
 export function formatVisibility(metres: number, unit: TemperatureUnit): string {
-  return unit === "C"
-    ? `${(metres / 1000).toFixed(1)} km`
-    : `${(metres / 1609.34).toFixed(1)} mi`;
+  return unit === "C" ? `${(metres / 1000).toFixed(1)} km` : `${(metres / 1609.34).toFixed(1)} mi`;
 }
 
 export function uvLabel(uv: number): string {

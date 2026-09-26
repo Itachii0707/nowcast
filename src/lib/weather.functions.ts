@@ -10,8 +10,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
-import { loadWeather, ProviderError } from "./weather.server";
-import type { WeatherResult } from "./weather-types";
+import { loadWeather, ProviderError, searchPlaces } from "./weather.server";
+import type { PlaceSuggestion, WeatherResult } from "./weather-types";
 
 const lookupSchema = z
   .object({
@@ -26,7 +26,7 @@ const lookupSchema = z
   });
 
 export const getWeather = createServerFn({ method: "GET" })
-  .inputValidator((input: unknown) => lookupSchema.parse(input))
+  .validator((input: unknown) => lookupSchema.parse(input))
   .handler(async ({ data }): Promise<WeatherResult> => {
     // Read the secret at call time: env is injected per request on the edge.
     const apiKey = process.env["OPENWEATHER_API_KEY"]?.trim() || undefined;
@@ -43,5 +43,20 @@ export const getWeather = createServerFn({ method: "GET" })
         code: "network",
         message: "We couldn't reach the weather service. Try again in a moment.",
       };
+    }
+  });
+
+const searchSchema = z.object({
+  query: z.string().trim().min(2).max(100),
+});
+
+export const searchLocations = createServerFn({ method: "GET" })
+  .validator((input: unknown) => searchSchema.parse(input))
+  .handler(async ({ data }): Promise<PlaceSuggestion[]> => {
+    try {
+      return await searchPlaces(data.query);
+    } catch (error) {
+      console.error("searchLocations failed", error);
+      return [];
     }
   });

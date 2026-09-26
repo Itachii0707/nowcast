@@ -39,7 +39,7 @@ export function SkyArc({ current, localNow }: SkyArcProps) {
     <div className="mt-6">
       <div className="brut-flat relative overflow-hidden bg-secondary px-4 pb-3 pt-4">
         <svg
-          viewBox={`0 0 ${W} ${H + 6}`}
+          viewBox={`0 -16 ${W} ${H + 24}`}
           className="h-32 w-full"
           role="img"
           aria-label={`Sun path: ${Math.round(progress * 100)} percent through daylight. ${moon.label}.`}
@@ -66,21 +66,19 @@ export function SkyArc({ current, localNow }: SkyArcProps) {
             style={{ strokeDasharray: 1 }}
             transition={{ duration: reduced ? 0 : 1.1, ease: "easeOut" }}
           />
-          <line
-            x1={CX - R}
-            y1={CY}
-            x2={CX + R}
-            y2={CY}
-            stroke="var(--ink)"
-            strokeWidth={3}
-          />
+          <line x1={CX - R} y1={CY} x2={CX + R} y2={CY} stroke="var(--ink)" strokeWidth={3} />
           {/* Travelling body */}
           <motion.g
             initial={false}
             animate={{ x: marker.x, y: marker.y }}
             transition={{ duration: reduced ? 0 : 1.1, ease: "easeOut" }}
           >
-            <circle r={12} fill={current.isDay ? "var(--sun)" : "var(--snow)"} stroke="var(--ink)" strokeWidth={3} />
+            <circle
+              r={12}
+              fill={current.isDay ? "var(--sun)" : "var(--snow)"}
+              stroke="var(--ink)"
+              strokeWidth={3}
+            />
           </motion.g>
         </svg>
 

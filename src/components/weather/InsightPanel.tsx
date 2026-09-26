@@ -7,7 +7,13 @@ import { motion } from "motion/react";
 import { CloudRain, Shirt, Sparkles, ThermometerSun } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { formatHour, formatTemp, uvLabel, type TemperatureUnit } from "@/lib/weather-format";
+import {
+  convertTemp,
+  formatHour,
+  formatTemp,
+  uvLabel,
+  type TemperatureUnit,
+} from "@/lib/weather-format";
 import type { CurrentWeather, DailyPoint, HourlyPoint } from "@/lib/weather-types";
 
 interface InsightPanelProps {
@@ -57,30 +63,30 @@ export function InsightPanel({ current, hourly, daily, unit }: InsightPanelProps
           ? `Peak chance around ${formatHour(peakRain.time)}h`
           : "No meaningful rain in the next 12 hours",
       icon: <CloudRain className="size-4" strokeWidth={3} aria-hidden="true" />,
-      accent: "bg-rain text-ink",
+      accent: "bg-rain text-black font-black",
     },
     {
       label: "Warmest stretch",
       value: warmest ? formatTemp(warmest.temp, unit) : "—",
       detail: warmest ? `Expected near ${formatHour(warmest.time)}h` : "Awaiting hourly data",
       icon: <ThermometerSun className="size-4" strokeWidth={3} aria-hidden="true" />,
-      accent: "bg-hot text-ink",
+      accent: "bg-hot text-black font-black",
     },
     {
       label: "Today's range",
       value: today ? `${formatTemp(today.min, unit)} / ${formatTemp(today.max, unit)}` : "—",
       detail: today
-        ? `${Math.round(today.max - today.min)}° swing between low and high`
+        ? `${Math.round(convertTemp(today.max, unit) - convertTemp(today.min, unit))}° swing between low and high`
         : "Awaiting daily data",
       icon: <Sparkles className="size-4" strokeWidth={3} aria-hidden="true" />,
-      accent: "bg-lime text-ink",
+      accent: "bg-lime text-black font-black",
     },
     {
       label: "What to wear",
       value: outfitAdvice(current, rainChance),
       detail: `UV ${uvLabel(current.uvIndex).toLowerCase()} · humidity ${Math.round(current.humidity)}%`,
       icon: <Shirt className="size-4" strokeWidth={3} aria-hidden="true" />,
-      accent: "bg-accent text-accent-foreground",
+      accent: "bg-accent text-black font-black",
     },
   ];
 

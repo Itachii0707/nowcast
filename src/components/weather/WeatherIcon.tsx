@@ -22,7 +22,7 @@ const ACCENT: Record<ConditionGroup, string> = {
 
 interface WeatherIconProps {
   group: ConditionGroup;
-  isDay?: boolean;
+  isDay?: boolean | undefined;
   className?: string;
   /** Disable motion for dense lists. */
   still?: boolean;
@@ -47,9 +47,7 @@ export function WeatherIcon({
           animate={reduced ? { opacity: 1 } : { opacity: 1, scale: 1, rotate: 0 }}
           exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.6, rotate: 20 }}
           transition={
-            reduced
-              ? { duration: 0 }
-              : { type: "spring", stiffness: 320, damping: 20, mass: 0.6 }
+            reduced ? { duration: 0 } : { type: "spring", stiffness: 320, damping: 20, mass: 0.6 }
           }
         >
           <Glyph

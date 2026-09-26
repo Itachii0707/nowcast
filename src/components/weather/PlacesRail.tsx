@@ -45,10 +45,7 @@ function Rail({
   return (
     <section className="brut bg-card p-5" aria-labelledby={`${title}-heading`}>
       <div className="flex items-center justify-between gap-2">
-        <h2
-          id={`${title}-heading`}
-          className="inline-flex items-center gap-2 text-base uppercase"
-        >
+        <h2 id={`${title}-heading`} className="inline-flex items-center gap-2 text-base uppercase">
           <span className={`brut-flat inline-flex size-7 items-center justify-center ${accent}`}>
             {icon}
           </span>
@@ -81,9 +78,7 @@ function Rail({
                   className="px-3 py-1.5 font-mono text-xs font-bold uppercase"
                 >
                   {place.name}
-                  {place.country ? (
-                    <span className="ml-1 opacity-60">{place.country}</span>
-                  ) : null}
+                  {place.country ? <span className="ml-1 opacity-60">{place.country}</span> : null}
                 </button>
                 <button
                   type="button"
@@ -116,7 +111,7 @@ export function PlacesRail({
       <Rail
         title="Favourites"
         icon={<Star className="size-4" strokeWidth={3} aria-hidden="true" />}
-        accent="bg-sun text-ink"
+        accent="bg-sun text-black font-black"
         places={favorites}
         emptyCopy="Save a city to pin it here."
         activeKey={activeKey}
@@ -126,7 +121,7 @@ export function PlacesRail({
       <Rail
         title="Recent"
         icon={<Clock className="size-4" strokeWidth={3} aria-hidden="true" />}
-        accent="bg-rain text-ink"
+        accent="bg-rain text-black font-black"
         places={recents}
         emptyCopy="Your searches will show up here."
         activeKey={activeKey}

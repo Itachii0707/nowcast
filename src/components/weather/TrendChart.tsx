@@ -1,12 +1,12 @@
 /**
  * Interactive temperature trend chart (Chart.js).
  *
- * The chart is only mounted after hydration so the canvas never renders during
- * SSR, and colours are read from the live design tokens so it follows the
- * active theme.
+ * Canvas 2D uses explicit hex/rgb colors to ensure 100% reliable rendering
+ * and ultra-high text visibility in both light and dark themes.
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { motion } from "motion/react";
 import {
   CategoryScale,
   Chart as ChartJS,
@@ -27,12 +27,6 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, 
 
 type Range = "hourly" | "weekly";
 
-function token(name: string, fallback: string): string {
-  if (typeof window === "undefined") return fallback;
-  const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return value || fallback;
-}
-
 export function TrendChart({
   hourly,
   daily,
@@ -49,15 +43,40 @@ export function TrendChart({
 
   useEffect(() => setMounted(true), []);
 
-  const palette = useMemo(() => {
-    if (!mounted) return { ink: "#111", accent: "#f2c14e", rain: "#4f7dd4" };
+  // Explicit, high-contrast color tokens for Canvas 2D
+  const colors = useMemo(() => {
+    if (dark) {
+      return {
+        ink: "#f5f5f5",
+        text: "#f5f5f5",
+        mutedText: "#a3a3a3",
+        accent: "#f2c14e",
+        accentFill: "rgba(242, 193, 78, 0.40)",
+        rain: "#60a5fa",
+        grid: "rgba(255, 255, 255, 0.15)",
+        border: "#f5f5f5",
+        tooltipBg: "#0f1117",
+        tooltipTitle: "#f2c14e",
+        tooltipBody: "#f5f5f5",
+        tooltipBorder: "#f5f5f5",
+      };
+    }
+
     return {
-      ink: token("--ink", dark ? "#fafafa" : "#111111"),
-      accent: token("--accent", "#f2c14e"),
-      rain: token("--rain", "#4f7dd4"),
+      ink: "#111111",
+      text: "#111111",
+      mutedText: "#374151",
+      accent: "#f2c14e",
+      accentFill: "rgba(242, 193, 78, 0.75)",
+      rain: "#1d4ed8",
+      grid: "rgba(0, 0, 0, 0.12)",
+      border: "#111111",
+      tooltipBg: "#111111",
+      tooltipTitle: "#f2c14e",
+      tooltipBody: "#ffffff",
+      tooltipBorder: "#111111",
     };
-    // Recompute when the theme flips.
-  }, [mounted, dark]);
+  }, [dark]);
 
   const data = useMemo(() => {
     if (range === "hourly") {
@@ -67,13 +86,13 @@ export function TrendChart({
           {
             label: `Temperature °${unit}`,
             data: hourly.map((hour) => Number(convertTemp(hour.temp, unit).toFixed(1))),
-            borderColor: palette.ink,
-            backgroundColor: palette.accent,
+            borderColor: colors.ink,
+            backgroundColor: colors.accentFill,
             fill: true,
             borderWidth: 3,
             tension: 0.35,
-            pointBackgroundColor: palette.accent,
-            pointBorderColor: palette.ink,
+            pointBackgroundColor: colors.accent,
+            pointBorderColor: colors.ink,
             pointBorderWidth: 2,
             pointRadius: 4,
             pointHoverRadius: 7,
@@ -88,33 +107,33 @@ export function TrendChart({
         {
           label: `High °${unit}`,
           data: daily.map((day) => Number(convertTemp(day.max, unit).toFixed(1))),
-          borderColor: palette.ink,
-          backgroundColor: palette.accent,
+          borderColor: colors.ink,
+          backgroundColor: colors.accentFill,
           fill: true,
           borderWidth: 3,
           tension: 0.35,
-          pointBackgroundColor: palette.accent,
-          pointBorderColor: palette.ink,
+          pointBackgroundColor: colors.accent,
+          pointBorderColor: colors.ink,
           pointBorderWidth: 2,
-          pointRadius: 4,
+          pointRadius: 5,
         },
         {
           label: `Low °${unit}`,
           data: daily.map((day) => Number(convertTemp(day.min, unit).toFixed(1))),
-          borderColor: palette.rain,
+          borderColor: colors.rain,
           backgroundColor: "transparent",
           fill: false,
           borderWidth: 3,
           borderDash: [6, 4],
           tension: 0.35,
-          pointBackgroundColor: palette.rain,
-          pointBorderColor: palette.ink,
+          pointBackgroundColor: colors.rain,
+          pointBorderColor: colors.ink,
           pointBorderWidth: 2,
-          pointRadius: 4,
+          pointRadius: 5,
         },
       ],
     };
-  }, [range, hourly, daily, unit, palette]);
+  }, [range, hourly, daily, unit, colors]);
 
   const options: ChartOptions<"line"> = useMemo(
     () => ({
@@ -125,22 +144,23 @@ export function TrendChart({
         legend: {
           display: range === "weekly",
           labels: {
-            color: palette.ink,
-            boxHeight: 3,
-            font: { family: "JetBrains Mono, monospace", weight: 700, size: 10 },
+            color: colors.text,
+            boxHeight: 4,
+            boxWidth: 16,
+            font: { family: "JetBrains Mono, monospace", weight: 700, size: 11 },
           },
         },
         tooltip: {
-          backgroundColor: palette.ink,
-          titleColor: dark ? "#111" : "#fff",
-          bodyColor: dark ? "#111" : "#fff",
-          borderColor: palette.ink,
-          borderWidth: 3,
+          backgroundColor: colors.tooltipBg,
+          titleColor: colors.tooltipTitle,
+          bodyColor: colors.tooltipBody,
+          borderColor: colors.tooltipBorder,
+          borderWidth: 2,
           cornerRadius: 0,
           displayColors: false,
           padding: 10,
-          titleFont: { family: "JetBrains Mono, monospace", weight: 700, size: 11 },
-          bodyFont: { family: "JetBrains Mono, monospace", size: 11 },
+          titleFont: { family: "JetBrains Mono, monospace", weight: 700, size: 12 },
+          bodyFont: { family: "JetBrains Mono, monospace", weight: 600, size: 11 },
           callbacks: {
             label: (context) => `${context.dataset.label}: ${context.formattedValue}°${unit}`,
           },
@@ -148,47 +168,63 @@ export function TrendChart({
       },
       scales: {
         x: {
-          grid: { color: `color-mix(in oklab, ${palette.ink} 12%, transparent)` },
-          border: { color: palette.ink, width: 3 },
+          grid: { color: colors.grid },
+          border: { color: colors.border, width: 3 },
           ticks: {
-            color: palette.ink,
+            color: colors.text,
             maxRotation: 0,
             autoSkipPadding: 16,
-            font: { family: "JetBrains Mono, monospace", size: 10, weight: 700 },
+            font: { family: "JetBrains Mono, monospace", size: 11, weight: 700 },
           },
         },
         y: {
-          grid: { color: `color-mix(in oklab, ${palette.ink} 12%, transparent)` },
-          border: { color: palette.ink, width: 3 },
+          grid: { color: colors.grid },
+          border: { color: colors.border, width: 3 },
           ticks: {
-            color: palette.ink,
+            color: colors.text,
             callback: (value) => `${value}°`,
-            font: { family: "JetBrains Mono, monospace", size: 10, weight: 700 },
+            font: { family: "JetBrains Mono, monospace", size: 11, weight: 700 },
           },
         },
       },
     }),
-    [palette, range, unit, dark],
+    [colors, range, unit],
   );
 
   return (
-    <section className="brut bg-card p-6" aria-labelledby="trend-heading">
+    <section className="brut bg-card p-4 sm:p-6" aria-labelledby="trend-heading">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="trend-heading" className="text-xl uppercase">
-          Temperature trend
+        <h2
+          id="trend-heading"
+          className="text-xl uppercase font-display tracking-tight text-foreground"
+        >
+          Temperature Trend
         </h2>
-        <div className="flex" role="group" aria-label="Chart range">
+        <div
+          className="flex border-3 border-ink bg-card p-0.5"
+          role="group"
+          aria-label="Chart range"
+        >
           {(["hourly", "weekly"] as const).map((option) => (
             <button
               key={option}
               type="button"
               onClick={() => setRange(option)}
               aria-pressed={range === option}
-              className={`brut-sm px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase ${
-                range === option ? "bg-accent text-accent-foreground" : "bg-card"
-              } ${option === "weekly" ? "-ml-[3px]" : ""}`}
+              className={`relative px-3 py-1.5 font-mono text-[0.65rem] font-bold uppercase transition-colors z-10 cursor-pointer ${
+                range === option
+                  ? "text-accent-foreground font-black"
+                  : "text-foreground font-bold hover:bg-muted/50"
+              }`}
             >
-              {option === "hourly" ? "24 hours" : "7 days"}
+              {range === option && (
+                <motion.span
+                  layoutId="trend-range-active"
+                  className="absolute inset-0 bg-accent border-2 border-ink -z-10 shadow-[2px_2px_0_0_var(--ink)]"
+                  transition={{ type: "spring", stiffness: 350, damping: 28 }}
+                />
+              )}
+              <span>{option === "hourly" ? "24 hours" : "7 days"}</span>
             </button>
           ))}
         </div>

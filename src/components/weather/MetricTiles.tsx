@@ -3,7 +3,7 @@
  */
 
 import { motion } from "motion/react";
-import { Droplets, Eye, Gauge, Navigation, Sunrise, Sunset, Wind } from "lucide-react";
+import { Droplets, Eye, Gauge, Navigation, Sun, SunMedium, Sunrise, Sunset } from "lucide-react";
 import type { ReactNode } from "react";
 
 import {
@@ -51,13 +51,11 @@ function Tile({ label, value, detail, icon, accent, index }: TileProps) {
   );
 }
 
-export function MetricTiles({
-  current,
-  unit,
-}: {
-  current: CurrentWeather;
-  unit: TemperatureUnit;
-}) {
+export function MetricTiles({ current, unit }: { current: CurrentWeather; unit: TemperatureUnit }) {
+  const windDetail = current.windGust
+    ? `From ${windDirection(current.windDeg)} · Gusts ${formatWind(current.windGust, unit)}`
+    : `From ${windDirection(current.windDeg)} · ${Math.round(current.windDeg)}°`;
+
   return (
     <section aria-labelledby="metrics-heading">
       <h2 id="metrics-heading" className="sr-only">
@@ -68,16 +66,18 @@ export function MetricTiles({
           index={0}
           label="Humidity"
           value={`${Math.round(current.humidity)}%`}
-          detail={current.humidity > 70 ? "Muggy air" : "Comfortable"}
-          accent="bg-rain text-ink"
+          detail={
+            current.humidity > 70 ? "Muggy air" : current.humidity < 30 ? "Dry air" : "Comfortable"
+          }
+          accent="bg-rain text-black font-black"
           icon={<Droplets className="size-4" strokeWidth={3} aria-hidden="true" />}
         />
         <Tile
           index={1}
           label="Wind"
           value={formatWind(current.windSpeed, unit)}
-          detail={`From ${windDirection(current.windDeg)} · ${Math.round(current.windDeg)}°`}
-          accent="bg-lime text-ink"
+          detail={windDetail}
+          accent="bg-lime text-black font-black"
           icon={
             <span
               className="inline-flex"
@@ -92,7 +92,7 @@ export function MetricTiles({
           label="Visibility"
           value={formatVisibility(current.visibility, unit)}
           detail={current.visibility >= 9000 ? "Clear sightlines" : "Reduced"}
-          accent="bg-fog text-ink"
+          accent="bg-fog text-black font-black"
           icon={<Eye className="size-4" strokeWidth={3} aria-hidden="true" />}
         />
         <Tile
@@ -100,7 +100,7 @@ export function MetricTiles({
           label="Pressure"
           value={`${current.pressure} hPa`}
           detail={current.pressure > 1013 ? "High / settled" : "Low / unsettled"}
-          accent="bg-storm text-ink"
+          accent="bg-storm text-white font-black"
           icon={<Gauge className="size-4" strokeWidth={3} aria-hidden="true" />}
         />
         <Tile
@@ -108,15 +108,15 @@ export function MetricTiles({
           label="UV index"
           value={current.uvIndex.toFixed(1)}
           detail={uvLabel(current.uvIndex)}
-          accent="bg-hot text-ink"
-          icon={<Wind className="size-4" strokeWidth={3} aria-hidden="true" />}
+          accent="bg-hot text-black font-black"
+          icon={<SunMedium className="size-4" strokeWidth={3} aria-hidden="true" />}
         />
         <Tile
           index={5}
           label="Sunrise"
           value={formatClock(current.sunrise)}
           detail="Local time"
-          accent="bg-sun text-ink"
+          accent="bg-sun text-black font-black"
           icon={<Sunrise className="size-4" strokeWidth={3} aria-hidden="true" />}
         />
         <Tile
@@ -124,7 +124,7 @@ export function MetricTiles({
           label="Sunset"
           value={formatClock(current.sunset)}
           detail="Local time"
-          accent="bg-night text-ink"
+          accent="bg-night text-white font-black"
           icon={<Sunset className="size-4" strokeWidth={3} aria-hidden="true" />}
         />
         <Tile
@@ -132,8 +132,8 @@ export function MetricTiles({
           label="Daylight"
           value={`${Math.max(0, Math.round((current.sunset - current.sunrise) / 3600000))} hrs`}
           detail={current.isDay ? "Currently daytime" : "Currently night"}
-          accent="bg-accent text-accent-foreground"
-          icon={<Sunrise className="size-4" strokeWidth={3} aria-hidden="true" />}
+          accent="bg-accent text-black font-black"
+          icon={<Sun className="size-4" strokeWidth={3} aria-hidden="true" />}
         />
       </ul>
     </section>

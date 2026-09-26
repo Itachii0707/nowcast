@@ -3,6 +3,7 @@
  * summaries and activity scoring. Nothing here touches the network.
  */
 
+import { formatTemp, formatWind, type TemperatureUnit } from "./weather-format";
 import type { CurrentWeather, MinutelyPoint } from "./weather-types";
 
 /* ------------------------------------------------------------------ *
@@ -23,7 +24,7 @@ export interface MoonPhase {
 
 export function moonPhase(epoch: number): MoonPhase {
   const days = epoch / 86400000 - KNOWN_NEW_MOON;
-  const fraction = ((days / SYNODIC_MONTH) % 1 + 1) % 1;
+  const fraction = (((days / SYNODIC_MONTH) % 1) + 1) % 1;
   const illumination = (1 - Math.cos(fraction * 2 * Math.PI)) / 2;
 
   const labels = [
@@ -90,7 +91,10 @@ function clamp(value: number) {
  * Rough suitability scores from the current conditions. Deliberately simple and
  * explainable rather than pretending to be meteorologically rigorous.
  */
-export function activityScores(current: CurrentWeather): ActivityScore[] {
+export function activityScores(
+  current: CurrentWeather,
+  unit: TemperatureUnit = "C",
+): ActivityScore[] {
   const { temp, windSpeed, uvIndex, humidity, condition, isDay } = current;
   const wet = condition.group === "rain" || condition.group === "storm";
   const windKmh = windSpeed * 3.6;
@@ -116,8 +120,12 @@ export function activityScores(current: CurrentWeather): ActivityScore[] {
   );
 
   return [
-    { name: "Running", score: running, note: wet ? "Wet underfoot" : `${Math.round(temp)}\u00B0 feels workable` },
-    { name: "Cycling", score: cycling, note: `${Math.round(windKmh)} km/h wind` },
+    {
+      name: "Running",
+      score: running,
+      note: wet ? "Wet underfoot" : `${formatTemp(temp, unit)} feels workable`,
+    },
+    { name: "Cycling", score: cycling, note: `${formatWind(windSpeed, unit)} wind` },
     {
       name: "Beach",
       score: beach,
