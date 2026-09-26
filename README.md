@@ -9,8 +9,6 @@
 [![Leaflet](https://img.shields.io/badge/Leaflet-Doppler_Radar-199900?style=for-the-badge&logo=leaflet&logoColor=white)](https://leafletjs.com/)
 [![License](https://img.shields.io/badge/License-MIT-black?style=for-the-badge)](LICENSE)
 
-check this out
-https://nowcast.antideploy.com/
 ---
 
 ## 🌪️ Overview
@@ -21,6 +19,9 @@ From real-time **Doppler precipitation radar** and **minute-by-minute rain forec
 
 Best of all, **it works out of the box with zero configuration** using keyless Open-Meteo data, while offering native server-side support for OpenWeatherMap One Call 3.0.
 
+
+check this out
+https://nowcast.antideploy.com/
 ---
 
 ## ✨ Core Features
